@@ -42,6 +42,17 @@ export function registerIpcHandlers(
     return updated;
   });
 
+  ipcMain.handle(IPC.PROFILE_GET_RUNNING, () => {
+    const activeIds = views.getActiveProfileIds();
+    return profiles.list().filter(p => activeIds.includes(p.id)).map(p => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      cdpPort: p.cdpPort,
+      isActive: views.isActive(p.id),
+    }));
+  });
+
   ipcMain.handle(IPC.BROWSER_NAVIGATE, (_, profileId, url) => {
     console.log('[IPC] BROWSER_NAVIGATE:', profileId, url);
     views.navigate(profileId, url);
@@ -52,11 +63,24 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC.BROWSER_ACTIVATE, (_, profileId) => views.activate(profileId));
 
+  let lastActiveProfileId: string | null = null;
+  ipcMain.handle(IPC.SETTINGS_SHOW, () => {
+    const active = views.getActiveProfileIds().find(id => views.isActive(id));
+    if (active) lastActiveProfileId = active;
+    views.hideAll();
+  });
+  ipcMain.handle(IPC.SETTINGS_HIDE, () => {
+    views.hideAll();
+    if (lastActiveProfileId) {
+      views.show(lastActiveProfileId);
+    }
+  });
+
   ipcMain.handle(IPC.CDP_START, async (_, profileId) => {
     const profile = profiles.get(profileId)!;
     const port = assignPort(profiles.list());
-    const wcId = views.getWebContentsId(profileId)!;
-    await startCdpProxy(profileId, port, wcId);
+    await views.ensureViewAndWait(profileId);
+    await startCdpProxy(profileId, port);
     profiles.update(profileId, { cdpPort: port });
     return port;
   });

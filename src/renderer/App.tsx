@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Profile, IPC } from '../shared/types';
 import { ProfileTabs } from './components/ProfileTabs';
 import { AddressBar } from './components/AddressBar';
+import { Settings } from './components/Settings';
 
 declare global {
   interface Window {
@@ -18,6 +19,7 @@ export default function App() {
   const [urlMap, setUrlMap] = useState<Record<string, string>>({});
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [titleMap, setTitleMap] = useState<Record<string, string>>({});
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     window.electronAPI.invoke(IPC.PROFILE_LIST).then(p => {
@@ -61,6 +63,23 @@ export default function App() {
     });
   };
 
+  if (showSettings) {
+    return (
+      <div className="settings-shell">
+        <div className="settings-header">
+          <button className="back-btn" onClick={() => {
+            setShowSettings(false);
+            window.electronAPI.invoke(IPC.SETTINGS_HIDE);
+          }}>
+            ← Back
+          </button>
+          <span className="settings-title">Settings</span>
+        </div>
+        <Settings />
+      </div>
+    );
+  }
+
   return (
     <div className="shell">
       <ProfileTabs
@@ -72,14 +91,22 @@ export default function App() {
         onClose={handleDelete}
       />
       <div className="main-content">
-        <AddressBar
-          url={urlMap[activeId ?? ''] ?? ''}
-          loading={loadingMap[activeId ?? ''] ?? false}
-          onNavigate={url => activeId && window.electronAPI.invoke(IPC.BROWSER_NAVIGATE, activeId, url)}
-          onBack={() => activeId && window.electronAPI.invoke(IPC.BROWSER_BACK, activeId)}
-          onForward={() => activeId && window.electronAPI.invoke(IPC.BROWSER_FORWARD, activeId)}
-          onReload={() => activeId && window.electronAPI.invoke(IPC.BROWSER_RELOAD, activeId)}
-        />
+        <div className="toolbar">
+          <AddressBar
+            url={urlMap[activeId ?? ''] ?? ''}
+            loading={loadingMap[activeId ?? ''] ?? false}
+            onNavigate={url => activeId && window.electronAPI.invoke(IPC.BROWSER_NAVIGATE, activeId, url)}
+            onBack={() => activeId && window.electronAPI.invoke(IPC.BROWSER_BACK, activeId)}
+            onForward={() => activeId && window.electronAPI.invoke(IPC.BROWSER_FORWARD, activeId)}
+            onReload={() => activeId && window.electronAPI.invoke(IPC.BROWSER_RELOAD, activeId)}
+          />
+          <button className="settings-btn" onClick={() => {
+            setShowSettings(true);
+            window.electronAPI.invoke(IPC.SETTINGS_SHOW);
+          }}>
+            ⚙
+          </button>
+        </div>
         <div className="browser-content" />
       </div>
     </div>

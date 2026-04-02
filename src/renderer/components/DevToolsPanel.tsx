@@ -25,7 +25,7 @@ export function DevToolsPanel({ profiles }: DevToolsPanelProps) {
             <>
               <span className="cdp-port">localhost:{profile.cdpPort}</span>
               <a
-                href={`chrome://inspect# devices`}
+                href="chrome://inspect#devices"
                 target="_blank"
                 rel="noopener noreferrer"
               >

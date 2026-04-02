@@ -100,6 +100,32 @@ export class BrowserViewManager {
     return view;
   }
 
+  ensureView(profileId: string): BrowserView | undefined {
+    const profile = this.profiles.get(profileId);
+    if (!profile) return undefined;
+    let view = this.views.get(profileId);
+    if (!view) {
+      view = this.create(profile);
+      this.views.set(profileId, view);
+      view.webContents.loadURL('about:blank');
+      console.log('[BVM] Created hidden view for CDP, webContentsId:', view.webContents.id);
+    }
+    return view;
+  }
+
+  async   ensureViewAndWait(profileId: string): Promise<BrowserView | undefined> {
+    const view = this.ensureView(profileId);
+    if (!view) return undefined;
+    const url = `data:text/html,${profileId}`;
+    if (view.webContents.getURL() !== url) {
+      await new Promise<void>((resolve) => {
+        view.webContents.once('did-finish-load', () => resolve());
+        view.webContents.loadURL(url);
+      });
+    }
+    return view;
+  }
+
   recalculateBounds(): void {
     const view = this.win.getBrowserView();
     if (!view) return;
@@ -145,5 +171,25 @@ export class BrowserViewManager {
 
   getWebContentsId(profileId: string): number | undefined {
     return this.views.get(profileId)?.webContents.id;
+  }
+
+  getActiveProfileIds(): string[] {
+    return Array.from(this.views.keys());
+  }
+
+  isActive(profileId: string): boolean {
+    return this.views.has(profileId);
+  }
+
+  hideAll(): void {
+    this.win.setBrowserView(null);
+  }
+
+  show(profileId: string): void {
+    const view = this.views.get(profileId);
+    if (view) {
+      this.win.setBrowserView(view);
+      this.recalculateBounds();
+    }
   }
 }
