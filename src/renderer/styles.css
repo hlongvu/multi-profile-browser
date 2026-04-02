@@ -1,0 +1,241 @@
+:root {
+  --toolbar-height: 72px;
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3c3c3c;
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --border-color: #404040;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: var(--toolbar-height);
+  background: var(--bg-secondary);
+}
+
+.profile-tabs {
+  display: flex;
+  align-items: center;
+  height: var(--toolbar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 8px;
+}
+
+.tabs-list {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  gap: 4px;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  min-width: 120px;
+  max-width: 200px;
+  position: relative;
+}
+
+.tab.active {
+  background: var(--bg-primary);
+}
+
+.tab-name {
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-close:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.add-tab {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 20px;
+  margin-left: 8px;
+}
+
+.add-tab:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.address-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.nav-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.url-form {
+  flex: 1;
+}
+
+.url-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+.script-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.script-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.script-toolbar button {
+  padding: 6px 16px;
+  border: none;
+  background: #007aff;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.script-toolbar button:disabled {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.script-output {
+  padding: 8px;
+  background: var(--bg-primary);
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.devtools-panel {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.devtools-panel h3 {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.devtools-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.devtools-profile .cdp-port {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.devtools-profile a {
+  color: #007aff;
+  font-size: 12px;
+}
+
+.devtools-profile button {
+  padding: 4px 8px;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
