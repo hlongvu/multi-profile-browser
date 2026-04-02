@@ -50,7 +50,7 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC.BROWSER_FORWARD, (_, profileId) => views.forward(profileId));
   ipcMain.handle(IPC.BROWSER_RELOAD, (_, profileId) => views.reload(profileId));
 
-  ipcMain.handle('browser:activateProfile', (_, profileId) => views.activate(profileId));
+  ipcMain.handle(IPC.BROWSER_ACTIVATE, (_, profileId) => views.activate(profileId));
 
   ipcMain.handle(IPC.CDP_START, async (_, profileId) => {
     const profile = profiles.get(profileId)!;

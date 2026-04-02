@@ -18,7 +18,7 @@ export function ProfileTabs({ profiles, activeId, titleMap, onSelect, onAdd, onC
             key={profile.id}
             className={`tab ${profile.id === activeId ? 'active' : ''}`}
             onClick={() => onSelect(profile.id)}
-            style={{ borderTop: `3px solid ${profile.color}` }}
+            style={{ borderLeftColor: profile.id === activeId ? profile.color : 'transparent' }}
           >
             <span className="tab-name">{profile.name}</span>
             <span className="tab-title">{titleMap[profile.id] || ''}</span>

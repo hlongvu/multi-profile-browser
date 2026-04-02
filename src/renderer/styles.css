@@ -1,5 +1,6 @@
 :root {
-  --toolbar-height: 72px;
+  --toolbar-height: 48px;
+  --sidebar-width: 180px;
   --bg-primary: #1e1e1e;
   --bg-secondary: #2d2d2d;
   --bg-tertiary: #3c3c3c;
@@ -27,41 +28,44 @@ body {
 
 .shell {
   display: flex;
-  flex-direction: column;
-  height: var(--toolbar-height);
-  background: var(--bg-secondary);
+  flex-direction: row;
+  height: 100%;
+  background: transparent;
 }
 
 .profile-tabs {
   display: flex;
-  align-items: center;
-  height: var(--toolbar-height);
+  flex-direction: column;
+  width: 180px;
+  min-width: 180px;
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 8px;
+  border-right: 1px solid var(--border-color);
+  padding: 8px;
+  height: 100%;
 }
 
 .tabs-list {
   display: flex;
+  flex-direction: column;
   flex: 1;
-  overflow-x: auto;
+  overflow-y: auto;
   gap: 4px;
 }
 
 .tab {
   display: flex;
   flex-direction: column;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: var(--bg-tertiary);
-  border-radius: 6px 6px 0 0;
+  border-radius: 6px;
   cursor: pointer;
-  min-width: 120px;
-  max-width: 200px;
   position: relative;
+  border-left: 3px solid transparent;
 }
 
 .tab.active {
   background: var(--bg-primary);
+  border-left-color: var(--tab-color, #007aff);
 }
 
 .tab-name {
@@ -78,6 +82,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 .tab-close {
@@ -101,15 +106,15 @@ body {
 }
 
 .add-tab {
-  width: 32px;
-  height: 32px;
+  width: 100%;
+  height: 36px;
   border: none;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: 6px;
   font-size: 20px;
-  margin-left: 8px;
+  margin-top: 8px;
 }
 
 .add-tab:hover {
@@ -124,6 +129,18 @@ body {
   padding: 8px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  height: var(--toolbar-height);
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.browser-content {
+  flex: 1;
+  background: transparent;
 }
 
 .nav-btn {

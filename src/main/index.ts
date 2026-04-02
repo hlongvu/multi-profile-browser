@@ -4,7 +4,8 @@ import { ProfileManager } from './profileManager';
 import { BrowserViewManager } from './browserViewManager';
 import { registerIpcHandlers } from './ipc';
 
-const TOOLBAR_HEIGHT = 72;
+const TOOLBAR_HEIGHT = 48;
+const SIDEBAR_WIDTH = 180;
 
 let win: BrowserWindow;
 
@@ -30,7 +31,7 @@ app.whenReady().then(() => {
   console.log('Window created');
 
   const profileManager = new ProfileManager();
-  const viewManager = new BrowserViewManager(win, profileManager, TOOLBAR_HEIGHT);
+  const viewManager = new BrowserViewManager(win, profileManager, TOOLBAR_HEIGHT, SIDEBAR_WIDTH);
 
   registerIpcHandlers(win, profileManager, viewManager);
 

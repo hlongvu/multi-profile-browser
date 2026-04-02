@@ -38,7 +38,7 @@ export default function App() {
 
   const activate = (id: string) => {
     setActiveId(id);
-    window.electronAPI.invoke('browser:activateProfile', id);
+    window.electronAPI.invoke(IPC.BROWSER_ACTIVATE, id);
   };
 
   const handleCreate = () => {
@@ -71,14 +71,17 @@ export default function App() {
         onAdd={handleCreate}
         onClose={handleDelete}
       />
-      <AddressBar
-        url={urlMap[activeId ?? ''] ?? ''}
-        loading={loadingMap[activeId ?? ''] ?? false}
-        onNavigate={url => activeId && window.electronAPI.invoke(IPC.BROWSER_NAVIGATE, activeId, url)}
-        onBack={() => activeId && window.electronAPI.invoke(IPC.BROWSER_BACK, activeId)}
-        onForward={() => activeId && window.electronAPI.invoke(IPC.BROWSER_FORWARD, activeId)}
-        onReload={() => activeId && window.electronAPI.invoke(IPC.BROWSER_RELOAD, activeId)}
-      />
+      <div className="main-content">
+        <AddressBar
+          url={urlMap[activeId ?? ''] ?? ''}
+          loading={loadingMap[activeId ?? ''] ?? false}
+          onNavigate={url => activeId && window.electronAPI.invoke(IPC.BROWSER_NAVIGATE, activeId, url)}
+          onBack={() => activeId && window.electronAPI.invoke(IPC.BROWSER_BACK, activeId)}
+          onForward={() => activeId && window.electronAPI.invoke(IPC.BROWSER_FORWARD, activeId)}
+          onReload={() => activeId && window.electronAPI.invoke(IPC.BROWSER_RELOAD, activeId)}
+        />
+        <div className="browser-content" />
+      </div>
     </div>
   );
 }

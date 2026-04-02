@@ -9,6 +9,7 @@ export class BrowserViewManager {
     private win: BrowserWindow,
     private profiles: ProfileManager,
     private toolbarHeight: number,
+    private sidebarWidth: number,
   ) {}
 
   private create(profile: Profile): BrowserView {
@@ -27,6 +28,18 @@ export class BrowserViewManager {
         contextIsolation: true,
         nodeIntegration: false,
       },
+    });
+
+    view.webContents.on('new-window', (event, url, frameName, disposition) => {
+      console.log('[BVM] new-window event:', url, frameName, disposition);
+      event.preventDefault();
+      if (disposition === 'new-window' || disposition === 'foreground-tab' || disposition === 'background-tab') {
+        view.webContents.loadURL(url);
+      }
+    });
+
+    view.webContents.on('will-navigate', (event, url) => {
+      console.log('[BVM] will-navigate:', url);
     });
 
     view.webContents.on('page-title-updated', (_, title) => {
@@ -56,9 +69,16 @@ export class BrowserViewManager {
     let view = this.views.get(profileId);
     if (!view) view = this.create(profile);
 
+    const { width, height } = this.win.getBounds();
+    const bounds = {
+      x: this.sidebarWidth,
+      y: this.toolbarHeight,
+      width: width - this.sidebarWidth,
+      height: height - this.toolbarHeight,
+    };
+    view.setBounds(bounds);
     this.win.setBrowserView(view);
-    this.recalculateBounds();
-    console.log('[BVM] Activated profile:', profileId, 'view bounds:', this.win.getBrowserView()?.getBounds());
+    console.log('[BVM] Activated profile:', profileId, 'bounds:', bounds);
 
     if (view.webContents.getURL() === '' || view.webContents.getURL() === 'about:blank') {
       if (profile.homeUrl && profile.homeUrl !== 'about:blank') {
@@ -84,7 +104,12 @@ export class BrowserViewManager {
     const view = this.win.getBrowserView();
     if (!view) return;
     const { width, height } = this.win.getBounds();
-    view.setBounds({ x: 0, y: this.toolbarHeight, width, height: height - this.toolbarHeight });
+    view.setBounds({
+      x: this.sidebarWidth,
+      y: this.toolbarHeight,
+      width: width - this.sidebarWidth,
+      height: height - this.toolbarHeight,
+    });
   }
 
   navigate(profileId: string, url: string): void {
