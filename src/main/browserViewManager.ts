@@ -56,6 +56,7 @@ export class BrowserViewManager {
       const url = view.webContents.getURL();
       this.win.webContents.send('browser:urlChanged', { profileId: profile.id, url });
       this.profiles.update(profile.id, { homeUrl: url });
+      view.webContents.executeJavaScript('Object.defineProperty(navigator, "webdriver", {get: () => false, configurable: true});').catch(() => {});
     });
 
     this.views.set(profile.id, view);
@@ -113,17 +114,18 @@ export class BrowserViewManager {
     return view;
   }
 
-  async   ensureViewAndWait(profileId: string): Promise<BrowserView | undefined> {
+  async ensureViewAndWait(profileId: string): Promise<{ view: BrowserView; cdpSessionId: number } | undefined> {
     const view = this.ensureView(profileId);
     if (!view) return undefined;
-    const url = `data:text/html,${profileId}`;
-    if (view.webContents.getURL() !== url) {
+    const currentUrl = view.webContents.getURL();
+    const targetUrl = (currentUrl && currentUrl !== 'about:blank') ? currentUrl : `data:text/html,${profileId}`;
+    if (view.webContents.getURL() !== targetUrl) {
       await new Promise<void>((resolve) => {
         view.webContents.once('did-finish-load', () => resolve());
-        view.webContents.loadURL(url);
+        view.webContents.loadURL(targetUrl);
       });
     }
-    return view;
+    return { view, cdpSessionId: view.webContents.id };
   }
 
   recalculateBounds(): void {

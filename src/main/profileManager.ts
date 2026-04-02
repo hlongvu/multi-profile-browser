@@ -1,14 +1,39 @@
 import Store from 'electron-store';
 import crypto from 'crypto';
 import { Profile, Script } from '../shared/types';
+import { app } from 'electron';
 
 interface StoreSchema {
   profiles: Profile[];
   scripts: Script[];
 }
 
+interface AppSettings {
+  storagePath?: string;
+}
+
+const appStore = new Store<AppSettings>({ name: 'settings' });
+
 export class ProfileManager {
-  private store = new Store<StoreSchema>({ defaults: { profiles: [], scripts: [] } });
+  private store: Store<StoreSchema>;
+
+  constructor() {
+    const storagePath = appStore.get('storagePath');
+    const configDir = storagePath || app.getPath('userData');
+    this.store = new Store<StoreSchema>({
+      cwd: configDir,
+      name: 'profiles',
+      defaults: { profiles: [], scripts: [] },
+    });
+  }
+
+  getStoragePath(): string {
+    return appStore.get('storagePath') || app.getPath('userData');
+  }
+
+  setStoragePath(newPath: string): void {
+    appStore.set('storagePath', newPath);
+  }
 
   list(): Profile[] {
     return this.store.get('profiles');

@@ -39,6 +39,8 @@ export const IPC = {
   PROFILE_GET_RUNNING: 'profile:getRunning',
   SETTINGS_SHOW: 'settings:show',
   SETTINGS_HIDE: 'settings:hide',
+  SETTINGS_GET_STORAGE_PATH: 'settings:getStoragePath',
+  SETTINGS_SELECT_STORAGE_PATH: 'settings:selectStoragePath',
   BROWSER_NAVIGATE: 'browser:navigate',
   BROWSER_BACK: 'browser:back',
   BROWSER_FORWARD: 'browser:forward',

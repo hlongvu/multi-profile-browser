@@ -12,6 +12,7 @@ let win: BrowserWindow;
 console.log('Starting ProfileBrowser...');
 
 app.commandLine.appendSwitch('remote-debugging-port', '9222');
+app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 
 app.whenReady().then(() => {
   console.log('App ready, creating window...');
@@ -43,6 +44,18 @@ app.whenReady().then(() => {
   });
 
   const menu = new Menu();
+  menu.append(new MenuItem({
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'selectAll' },
+    ],
+  }));
   menu.append(new MenuItem({
     label: 'Browser',
     submenu: [

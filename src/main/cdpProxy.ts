@@ -19,14 +19,14 @@ interface CdpTarget {
   title: string;
 }
 
-async function findTargetUrl(profileId: string, retries = 20, delay = 500): Promise<CdpTarget> {
+async function findTargetByWebContentsId(webContentsId: number, retries = 20, delay = 500): Promise<CdpTarget> {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch('http://localhost:9222/json/list');
+      const res = await fetch('http://localhost:9222/json');
       const targets: CdpTarget[] = await res.json();
-      const target = targets.find(t => t.url.includes(profileId));
+      const target = targets.find(t => t.webSocketDebuggerUrl.includes(webContentsId.toString(16)));
       if (target) {
-        console.log(`[CDP] Found target for ${profileId}:`, target.url);
+        console.log(`[CDP] Found target for webContentsId ${webContentsId}:`, target.url);
         return target;
       }
     } catch (e) {
@@ -34,16 +34,17 @@ async function findTargetUrl(profileId: string, retries = 20, delay = 500): Prom
     }
     await new Promise(r => setTimeout(r, delay));
   }
-  throw new Error(`No CDP target for profile ${profileId} after ${retries} retries`);
+  throw new Error(`No CDP target for webContentsId ${webContentsId} after ${retries} retries`);
 }
 
 export async function startCdpProxy(
   profileId: string,
+  webContentsId: number,
   externalPort: number,
 ): Promise<void> {
   if (proxies.has(profileId)) return;
 
-  const target = await findTargetUrl(profileId);
+  const target = await findTargetByWebContentsId(webContentsId);
 
   const server = http.createServer();
   const wss = new WebSocketServer({ server });
@@ -96,7 +97,7 @@ export async function startCdpProxy(
     server,
     wss,
     profileId,
-    webContentsId: 0,
+    webContentsId,
     targetUrl: target.url,
     close() {
       wss.close();

@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, session } from 'electron';
+import { BrowserWindow, ipcMain, session, dialog } from 'electron';
 import { IPC } from '../../shared/types';
 import { ProfileManager } from '../profileManager';
 import { BrowserViewManager } from '../browserViewManager';
@@ -19,6 +19,18 @@ export function registerIpcHandlers(
   profiles: ProfileManager,
   views: BrowserViewManager,
 ) {
+  ipcMain.handle(IPC.SETTINGS_GET_STORAGE_PATH, () => profiles.getStoragePath());
+  ipcMain.handle(IPC.SETTINGS_SELECT_STORAGE_PATH, async () => {
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory'],
+      title: 'Select Profile Storage Folder',
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      profiles.setStoragePath(result.filePaths[0]);
+      return result.filePaths[0];
+    }
+    return null;
+  });
   ipcMain.handle(IPC.PROFILE_LIST, () => profiles.list());
   ipcMain.handle(IPC.PROFILE_CREATE, (_, name, color) => {
     const p = profiles.create(name, color);
@@ -77,10 +89,10 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC.CDP_START, async (_, profileId) => {
-    const profile = profiles.get(profileId)!;
     const port = assignPort(profiles.list());
-    await views.ensureViewAndWait(profileId);
-    await startCdpProxy(profileId, port);
+    const result = await views.ensureViewAndWait(profileId);
+    if (!result) throw new Error('Failed to create view');
+    await startCdpProxy(profileId, result.cdpSessionId, port);
     profiles.update(profileId, { cdpPort: port });
     return port;
   });
