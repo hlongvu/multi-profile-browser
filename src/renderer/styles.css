@@ -504,7 +504,7 @@ body {
   border-radius: 4px;
   cursor: pointer;
   font-size: 11px;
-  margin-left: auto;
+  margin-left: 8px;
 }
 
 .delete-btn:hover {
@@ -512,26 +512,109 @@ body {
   color: white;
 }
 
-.delete-btn.confirm {
-  background: #dc3545;
-  color: white;
-  margin-left: 8px;
-}
-
-.delete-btn.confirm:hover {
-  background: #c82333;
-}
-
-.delete-btn.cancel {
-  border-color: var(--border-color);
+.rename-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  background: transparent;
   color: var(--text-secondary);
-  margin-left: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: auto;
 }
 
-.delete-btn.cancel:hover {
+.rename-btn:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
 }
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  min-width: 320px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modal-btn.cancel {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.modal-btn.cancel:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-btn.confirm {
+  border: none;
+  background: #007aff;
+  color: white;
+}
+
+.modal-btn.confirm:hover {
+  background: #0066dd;
+}
+
+
 
 .settings-header {
   display: flex;

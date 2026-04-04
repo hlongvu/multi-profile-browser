@@ -2,7 +2,7 @@ import { BrowserWindow, ipcMain, session, dialog } from 'electron';
 import { IPC } from '../../shared/types';
 import { ProfileManager } from '../profileManager';
 import { BrowserViewManager } from '../browserViewManager';
-import { startCdpProxy, stopCdpProxy } from '../cdpProxy';
+import { startCdpProxy, stopCdpProxy, getCdpProxyPort } from '../cdpProxy';
 import { runScript, stopScript } from '../scriptRunner';
 
 const CDP_BASE_PORT = 9223;
@@ -89,6 +89,10 @@ export function registerIpcHandlers(
   });
 
   ipcMain.handle(IPC.CDP_START, async (_, profileId) => {
+    // Return existing proxy port if already running
+    const existingPort = getCdpProxyPort(profileId);
+    if (existingPort !== undefined) return existingPort;
+
     const port = assignPort(profiles.list());
     const result = await views.ensureViewAndWait(profileId);
     if (!result) throw new Error('Failed to create view');
