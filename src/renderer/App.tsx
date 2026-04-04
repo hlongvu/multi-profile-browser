@@ -53,15 +53,7 @@ export default function App() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    window.electronAPI.invoke(IPC.PROFILE_DELETE, id).then(() => {
-      setProfiles(list => list.filter(p => p.id !== id));
-      if (activeId === id) {
-        const remaining = profiles.filter(p => p.id !== id);
-        if (remaining.length > 0) activate(remaining[0].id);
-      }
-    });
-  };
+  
 
   if (showSettings) {
     return (
@@ -88,7 +80,6 @@ export default function App() {
         titleMap={titleMap}
         onSelect={activate}
         onAdd={handleCreate}
-        onClose={handleDelete}
       />
       <div className="main-content">
         <div className="toolbar">

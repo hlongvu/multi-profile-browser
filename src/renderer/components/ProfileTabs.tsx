@@ -6,10 +6,9 @@ interface ProfileTabsProps {
   titleMap: Record<string, string>;
   onSelect: (id: string) => void;
   onAdd: () => void;
-  onClose: (id: string) => void;
 }
 
-export function ProfileTabs({ profiles, activeId, titleMap, onSelect, onAdd, onClose }: ProfileTabsProps) {
+export function ProfileTabs({ profiles, activeId, titleMap, onSelect, onAdd }: ProfileTabsProps) {
   return (
     <div className="profile-tabs">
       <div className="tabs-list">
@@ -22,12 +21,6 @@ export function ProfileTabs({ profiles, activeId, titleMap, onSelect, onAdd, onC
           >
             <span className="tab-name">{profile.name}</span>
             <span className="tab-title">{titleMap[profile.id] || ''}</span>
-            <button
-              className="tab-close"
-              onClick={e => { e.stopPropagation(); onClose(profile.id); }}
-            >
-              ×
-            </button>
           </div>
         ))}
       </div>

@@ -496,6 +496,43 @@ body {
   background: #0066dd;
 }
 
+.delete-btn {
+  padding: 4px 10px;
+  border: 1px solid #dc3545;
+  background: transparent;
+  color: #dc3545;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.delete-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-btn.confirm {
+  background: #dc3545;
+  color: white;
+  margin-left: 8px;
+}
+
+.delete-btn.confirm:hover {
+  background: #c82333;
+}
+
+.delete-btn.cancel {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+.delete-btn.cancel:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 .settings-header {
   display: flex;
   align-items: center;
