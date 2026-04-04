@@ -175,6 +175,13 @@ export class BrowserViewManager {
     return this.views.get(profileId)?.webContents.id;
   }
 
+  openDevTools(profileId: string): void {
+    const view = this.views.get(profileId);
+    if (view) {
+      view.webContents.openDevTools({ mode: 'detach' });
+    }
+  }
+
   getActiveProfileIds(): string[] {
     return Array.from(this.views.keys());
   }

@@ -90,6 +90,10 @@ export default function App() {
             onForward={() => activeId && window.electronAPI.invoke(IPC.BROWSER_FORWARD, activeId)}
             onReload={() => activeId && window.electronAPI.invoke(IPC.BROWSER_RELOAD, activeId)}
           />
+          <button className="settings-btn" onClick={() => activeId && window.electronAPI.invoke(IPC.BROWSER_INSPECT, activeId)} title="Inspect">
+            🔍
+          </button>
+          <div style={{ width: '8px' }} />
           <button className="settings-btn" onClick={() => {
             setShowSettings(true);
             window.electronAPI.invoke(IPC.SETTINGS_SHOW);

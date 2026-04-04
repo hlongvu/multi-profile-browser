@@ -76,6 +76,7 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC.BROWSER_RELOAD, (_, profileId) => views.reload(profileId));
 
   ipcMain.handle(IPC.BROWSER_ACTIVATE, (_, profileId) => views.activate(profileId));
+  ipcMain.handle(IPC.BROWSER_INSPECT, (_, profileId) => views.openDevTools(profileId));
 
   let lastActiveProfileId: string | null = null;
   ipcMain.handle(IPC.SETTINGS_SHOW, () => {

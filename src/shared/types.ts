@@ -46,6 +46,7 @@ export const IPC = {
   BROWSER_FORWARD: 'browser:forward',
   BROWSER_RELOAD: 'browser:reload',
   BROWSER_ACTIVATE: 'browser:activateProfile',
+  BROWSER_INSPECT: 'browser:inspect',
   CDP_START: 'cdp:startProxy',
   CDP_STOP: 'cdp:stopProxy',
   SCRIPT_RUN: 'script:run',
