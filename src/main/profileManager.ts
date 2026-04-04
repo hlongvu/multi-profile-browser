@@ -26,6 +26,18 @@ export class ProfileManager {
       name: 'profiles',
       defaults: { profiles: [], scripts: [] },
     });
+    this.migratePartitionPaths();
+  }
+
+  private migratePartitionPaths(): void {
+    const profiles = this.list();
+    const needsMigration = profiles.some(p => path.isAbsolute(p.partition));
+    if (!needsMigration) return;
+    const updated = profiles.map(p => ({
+      ...p,
+      partition: path.isAbsolute(p.partition) ? path.join('sessions', p.id) : p.partition,
+    }));
+    this.store.set('profiles', updated);
   }
 
   getStoragePath(): string {
@@ -50,7 +62,11 @@ export class ProfileManager {
   }
 
   getSessionDir(id: string): string {
-    return path.join(this.getStoragePath(), 'sessions', id);
+    return path.join('sessions', id);
+  }
+
+  resolvePartition(partition: string): string {
+    return path.join(this.getStoragePath(), partition);
   }
 
   create(name: string, color: string): Profile {

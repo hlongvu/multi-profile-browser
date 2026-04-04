@@ -45,7 +45,7 @@ export function registerIpcHandlers(
   });
   ipcMain.handle(IPC.PROFILE_UPDATE, (_, id, patch) => {
     const updated = profiles.update(id, patch);
-    const ses = session.fromPath(updated.partition);
+    const ses = session.fromPath(profiles.resolvePartition(updated.partition));
     if (patch.proxyConfig !== undefined) {
       ses.setProxy({ proxyRules: patch.proxyConfig });
     }

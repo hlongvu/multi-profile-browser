@@ -13,7 +13,7 @@ export class BrowserViewManager {
   ) {}
 
   private create(profile: Profile): BrowserView {
-    const ses = session.fromPath(profile.partition);
+    const ses = session.fromPath(this.profiles.resolvePartition(profile.partition));
 
     if (profile.proxyConfig) {
       ses.setProxy({ proxyRules: profile.proxyConfig });
