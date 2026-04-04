@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, session, dialog } from 'electron';
+import { BrowserWindow, ipcMain, session, dialog, app } from 'electron';
 import { IPC } from '../../shared/types';
 import { ProfileManager } from '../profileManager';
 import { BrowserViewManager } from '../browserViewManager';
@@ -27,6 +27,8 @@ export function registerIpcHandlers(
     });
     if (!result.canceled && result.filePaths.length > 0) {
       profiles.setStoragePath(result.filePaths[0]);
+      app.relaunch();
+      app.exit(0);
       return result.filePaths[0];
     }
     return null;
@@ -43,7 +45,7 @@ export function registerIpcHandlers(
   });
   ipcMain.handle(IPC.PROFILE_UPDATE, (_, id, patch) => {
     const updated = profiles.update(id, patch);
-    const ses = session.fromPartition(updated.partition);
+    const ses = session.fromPath(updated.partition);
     if (patch.proxyConfig !== undefined) {
       ses.setProxy({ proxyRules: patch.proxyConfig });
     }

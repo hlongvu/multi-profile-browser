@@ -1,5 +1,6 @@
 import Store from 'electron-store';
 import crypto from 'crypto';
+import path from 'path';
 import { Profile, Script } from '../shared/types';
 import { app } from 'electron';
 
@@ -33,6 +34,11 @@ export class ProfileManager {
 
   setStoragePath(newPath: string): void {
     appStore.set('storagePath', newPath);
+    this.store = new Store<StoreSchema>({
+      cwd: newPath,
+      name: 'profiles',
+      defaults: { profiles: [], scripts: [] },
+    });
   }
 
   list(): Profile[] {
@@ -43,13 +49,17 @@ export class ProfileManager {
     return this.list().find(p => p.id === id);
   }
 
+  getSessionDir(id: string): string {
+    return path.join(this.getStoragePath(), 'sessions', id);
+  }
+
   create(name: string, color: string): Profile {
     const id = crypto.randomUUID();
     const profile: Profile = {
       id,
       name,
       color,
-      partition: `persist:profile-${id}`,
+      partition: this.getSessionDir(id),
       homeUrl: 'about:blank',
       createdAt: Date.now(),
     };

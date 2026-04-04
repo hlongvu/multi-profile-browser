@@ -47,7 +47,7 @@ export function Settings() {
             <div className="settings-section">
               <label className="settings-label">Profile Storage Location</label>
               <p className="settings-description">
-                Choose where profile data will be stored. Changes will take effect after restarting.
+                Choose where profile data will be stored. The app will restart automatically to load profiles from the new location.
               </p>
               <div className="storage-path-row">
                 <span className="storage-path-value">{storagePath || 'Default location'}</span>

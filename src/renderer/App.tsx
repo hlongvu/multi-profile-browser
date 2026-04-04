@@ -34,7 +34,6 @@ export default function App() {
       setLoadingMap(m => ({ ...m, [data.profileId]: data.loading })));
     const offTitle = window.electronAPI.on('browser:titleChanged', (data: any) =>
       setTitleMap(m => ({ ...m, [data.profileId]: data.title })));
-
     return () => { offUrl(); offLoading(); offTitle(); };
   }, []);
 
