@@ -3,16 +3,52 @@ import path from 'path';
 import { ProfileManager } from './profileManager';
 import { BrowserViewManager } from './browserViewManager';
 import { registerIpcHandlers } from './ipc';
+import net from 'net';
 
 const TOOLBAR_HEIGHT = 48;
 const SIDEBAR_WIDTH = 180;
 
 let win: BrowserWindow;
+let cdpPort: number;
 
 console.log('Starting ProfileBrowser...');
 
-app.commandLine.appendSwitch('remote-debugging-port', '9222');
-app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+async function findAvailablePort(startPort = 9222): Promise<number> {
+  let port = startPort;
+  while (port < 9300) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const server = net.createServer();
+        server.once('error', reject);
+        server.once('listening', () => {
+          server.close();
+          resolve();
+        });
+        server.listen(port, '127.0.0.1');
+      });
+      return port;
+    } catch {
+      port++;
+    }
+  }
+  throw new Error('No available port found for CDP');
+}
+
+export function getCdpPort(): number {
+  return cdpPort;
+}
+
+async function initCdp() {
+  cdpPort = await findAvailablePort();
+  app.commandLine.appendSwitch('remote-debugging-port', cdpPort.toString());
+  app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+  console.log(`Using CDP port: ${cdpPort}`);
+}
+
+initCdp().catch(err => {
+  console.error('Failed to initialize CDP:', err);
+  process.exit(1);
+});
 
 app.whenReady().then(() => {
   console.log('App ready, creating window...');

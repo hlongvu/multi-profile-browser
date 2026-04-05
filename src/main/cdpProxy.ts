@@ -1,5 +1,17 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import http from 'http';
+import { getCdpPort } from './index';
+
+let cdpBaseUrl = 'http://localhost:9222';
+
+export function setCdpBaseUrl(url: string) {
+  cdpBaseUrl = url;
+}
+
+function getCdpBaseUrl() {
+  const port = getCdpPort();
+  return `http://localhost:${port}`;
+}
 
 interface ProxyHandle {
   server: http.Server;
@@ -36,19 +48,32 @@ async function findTargetByWebContentsId(
   retries = 20,
   delay = 500,
 ): Promise<CdpTarget> {
+  const hexId = webContentsId.toString(16);
+  const decimalId = webContentsId.toString(10);
+  
+  console.log(`[CDP:${webContentsId}] Looking for target (hex: ${hexId}, decimal: ${decimalId})`);
+  
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch('http://localhost:9222/json');
+      const res = await fetch(`${getCdpBaseUrl()}/json`);
       const targets: CdpTarget[] = await res.json();
+      
+      console.log(`[CDP:${webContentsId}] Retry ${i + 1}/${retries}: Available targets:`, 
+        targets.map(t => ({ id: t.id, url: t.url, ws: t.webSocketDebuggerUrl })));
+      
       const target = targets.find(t =>
-        t.webSocketDebuggerUrl.includes(webContentsId.toString(16)),
+        t.webSocketDebuggerUrl.includes(hexId) ||
+        t.webSocketDebuggerUrl.includes(decimalId) ||
+        t.id === hexId ||
+        t.id === decimalId
       );
+      
       if (target) {
-        console.log(`[CDP:${webContentsId}] Found target:`, target.url);
+        console.log(`[CDP:${webContentsId}] Found target:`, target.url, 'id:', target.id);
         return target;
       }
-    } catch {
-      // retry on fetch error
+    } catch (err) {
+      console.log(`[CDP:${webContentsId}] Retry ${i + 1}/${retries}: Fetch error`, err);
     }
     await new Promise(r => setTimeout(r, delay));
   }
@@ -57,7 +82,7 @@ async function findTargetByWebContentsId(
 
 async function refreshTarget(targetId: string): Promise<CdpTarget | undefined> {
   try {
-    const res = await fetch('http://localhost:9222/json/list');
+    const res = await fetch(`${getCdpBaseUrl()}/json/list`);
     const targets: CdpTarget[] = await res.json();
     return targets.find(t => t.id === targetId);
   } catch {
@@ -224,7 +249,7 @@ export async function startCdpProxy(
 
     if (url === '/json/version') {
       try {
-        const versionRes = await fetch('http://localhost:9222/json/version');
+        const versionRes = await fetch(`${getCdpBaseUrl()}/json/version`);
         const version = await versionRes.json();
         const browserId = new URL(version.webSocketDebuggerUrl).pathname.split('/').pop();
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -241,7 +266,7 @@ export async function startCdpProxy(
 
     if (url === '/json/protocol') {
       try {
-        const protocolRes = await fetch('http://localhost:9222/json/protocol');
+        const protocolRes = await fetch(`${getCdpBaseUrl()}/json/protocol`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(await protocolRes.text());
       } catch {
@@ -260,7 +285,8 @@ export async function startCdpProxy(
 
     if (urlPath.startsWith('/devtools/browser/')) {
       // Browser-level WS: proxy with target filtering so agent only sees own tab
-      const upstreamUrl = `ws://localhost:9222${urlPath}`;
+      const port = getCdpPort();
+      const upstreamUrl = `ws://localhost:${port}${urlPath}`;
       console.log(`[CDP:${profileId}] Browser WS connection → filtered proxy`);
       createFilteredBrowserProxy(client, upstreamUrl, profileId, target.id);
       return;

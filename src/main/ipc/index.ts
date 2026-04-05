@@ -4,12 +4,12 @@ import { ProfileManager } from '../profileManager';
 import { BrowserViewManager } from '../browserViewManager';
 import { startCdpProxy, stopCdpProxy, getCdpProxyPort } from '../cdpProxy';
 import { runScript, stopScript } from '../scriptRunner';
-
-const CDP_BASE_PORT = 9223;
+import { getCdpPort as getMainCdpPort } from '../index';
 
 function assignPort(profiles: { cdpPort?: number }[]): number {
   const usedPorts = new Set(profiles.map(p => p.cdpPort).filter(Boolean));
-  let port = CDP_BASE_PORT;
+  const mainCdpPort = getMainCdpPort();
+  let port = mainCdpPort + 1;
   while (usedPorts.has(port)) port++;
   return port;
 }
