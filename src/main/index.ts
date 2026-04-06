@@ -3,7 +3,10 @@ import path from 'path';
 import { ProfileManager } from './profileManager';
 import { BrowserViewManager } from './browserViewManager';
 import { registerIpcHandlers } from './ipc';
+import { startApiServer } from './apiServer';
 import net from 'net';
+
+app.setName('ProfileBrowser');
 
 const TOOLBAR_HEIGHT = 48;
 const SIDEBAR_WIDTH = 180;
@@ -71,6 +74,7 @@ app.whenReady().then(() => {
   const viewManager = new BrowserViewManager(win, profileManager, TOOLBAR_HEIGHT, SIDEBAR_WIDTH);
 
   registerIpcHandlers(win, profileManager, viewManager);
+  startApiServer(profileManager, viewManager);
 
   win.on('resize', () => viewManager.recalculateBounds());
   
@@ -80,6 +84,17 @@ app.whenReady().then(() => {
   });
 
   const menu = new Menu();
+  menu.append(new MenuItem({
+    submenu: [
+      { role: 'about' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  }));
   menu.append(new MenuItem({
     label: 'Edit',
     submenu: [
