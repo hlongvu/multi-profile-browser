@@ -4,6 +4,9 @@ import { getCdpPort } from './index';
 
 let cdpBaseUrl = 'http://localhost:9222';
 
+const HEARTBEAT_INTERVAL_MS = 25000;
+const HEARTBEAT_TIMEOUT_MS = 5000;
+
 export function setCdpBaseUrl(url: string) {
   cdpBaseUrl = url;
 }
@@ -11,6 +14,47 @@ export function setCdpBaseUrl(url: string) {
 function getCdpBaseUrl() {
   const port = getCdpPort();
   return `http://localhost:${port}`;
+}
+
+interface HeartbeatHandle {
+  intervalId: NodeJS.Timeout;
+  timeoutId: NodeJS.Timeout;
+}
+
+function setupHeartbeat(ws: WebSocket, label: string, onTimeout: () => void): HeartbeatHandle {
+  let isAlive = true;
+
+  const onPong = () => {
+    isAlive = true;
+  };
+
+  ws.on('pong', onPong);
+  ws.on('close', onPong);
+
+  const intervalId = setInterval(() => {
+    if (!isAlive) {
+      console.warn(`[CDP] ${label} heartbeat failed, terminating`);
+      onTimeout();
+      return;
+    }
+    isAlive = false;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+
+  const timeoutId = setTimeout(() => {
+    console.warn(`[CDP] ${label} heartbeat timeout`);
+    onTimeout();
+  }, HEARTBEAT_TIMEOUT_MS);
+
+  return { intervalId, timeoutId };
+}
+
+function clearHeartbeat(handle: HeartbeatHandle | undefined): void {
+  if (!handle) return;
+  clearInterval(handle.intervalId);
+  clearTimeout(handle.timeoutId);
 }
 
 interface ProxyHandle {
@@ -24,6 +68,7 @@ interface ProxyHandle {
 }
 
 const proxies = new Map<string, ProxyHandle>();
+const pendingProxies = new Set<string>();
 
 interface CdpTarget {
   id: string;
@@ -90,6 +135,25 @@ async function refreshTarget(targetId: string): Promise<CdpTarget | undefined> {
   }
 }
 
+async function findCurrentTargetByWebContentsId(webContentsId: number): Promise<CdpTarget | undefined> {
+  const hexId = webContentsId.toString(16);
+  const decimalId = webContentsId.toString(10);
+
+  try {
+    const res = await fetch(`${getCdpBaseUrl()}/json`);
+    const targets: CdpTarget[] = await res.json();
+
+    return targets.find(t =>
+      t.webSocketDebuggerUrl.includes(hexId) ||
+      t.webSocketDebuggerUrl.includes(decimalId) ||
+      t.id === hexId ||
+      t.id === decimalId
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 function pageWsPath(webSocketDebuggerUrl: string): string {
   const idx = webSocketDebuggerUrl.indexOf('/devtools/');
   return webSocketDebuggerUrl.substring(idx);
@@ -107,6 +171,29 @@ function createFilteredBrowserProxy(
 ): void {
   const upstream = new WebSocket(upstreamUrl);
   const pendingToUpstream: { msg: WebSocket.RawData; isBinary: boolean }[] = [];
+
+  let clientHeartbeat: HeartbeatHandle | undefined;
+  let upstreamHeartbeat: HeartbeatHandle | undefined;
+
+  const cleanup = () => {
+    clearHeartbeat(clientHeartbeat);
+    clearHeartbeat(upstreamHeartbeat);
+    pendingToUpstream.length = 0;
+  };
+
+  clientHeartbeat = setupHeartbeat(client, `client:${profileId}`, () => {
+    console.log(`[CDP:${profileId}] Client heartbeat timeout, terminating`);
+    cleanup();
+    upstream.terminate();
+    client.terminate();
+  });
+
+  upstreamHeartbeat = setupHeartbeat(upstream, `upstream:${profileId}`, () => {
+    console.log(`[CDP:${profileId}] Upstream heartbeat timeout, terminating`);
+    cleanup();
+    upstream.terminate();
+    client.terminate();
+  });
 
   // Track which CDP message ids were for Target.getTargets / Target.setDiscoverTargets
   // so we can filter responses back to the agent
@@ -206,14 +293,18 @@ function createFilteredBrowserProxy(
 
   upstream.on('error', (err) => {
     console.error(`[CDP:${profileId}] Browser upstream error:`, err.message);
+    cleanup();
     client.terminate();
   });
 
   client.on('close', () => {
-    pendingToUpstream.length = 0;
+    cleanup();
     upstream.terminate();
   });
-  upstream.on('close', () => client.terminate());
+  upstream.on('close', () => {
+    cleanup();
+    client.terminate();
+  });
 }
 
 export async function startCdpProxy(
@@ -222,8 +313,17 @@ export async function startCdpProxy(
   externalPort: number,
 ): Promise<void> {
   if (proxies.has(profileId)) return;
+  if (pendingProxies.has(profileId)) return;
+  pendingProxies.add(profileId);
 
-  const target = await findTargetByWebContentsId(webContentsId);
+  let target: CdpTarget;
+
+  try {
+    target = await findTargetByWebContentsId(webContentsId);
+  } catch (err) {
+    pendingProxies.delete(profileId);
+    throw err;
+  }
 
   const server = http.createServer();
   const wss = new WebSocketServer({ server });
@@ -284,7 +384,6 @@ export async function startCdpProxy(
     const urlPath = req.url ?? '';
 
     if (urlPath.startsWith('/devtools/browser/')) {
-      // Browser-level WS: proxy with target filtering so agent only sees own tab
       const port = getCdpPort();
       const upstreamUrl = `ws://localhost:${port}${urlPath}`;
       console.log(`[CDP:${profileId}] Browser WS connection → filtered proxy`);
@@ -292,45 +391,115 @@ export async function startCdpProxy(
       return;
     }
 
-    // Page-level WS: direct proxy to this profile's tab, no filtering needed
-    const upstreamUrl = target.webSocketDebuggerUrl;
-    console.log(`[CDP:${profileId}] Page WS connection:`, urlPath, '->', upstreamUrl);
+    let currentUpstreamUrl = target.webSocketDebuggerUrl;
+    let upstream: WebSocket | null = new WebSocket(currentUpstreamUrl);
+    let pendingToUpstream: { msg: WebSocket.RawData; isBinary: boolean }[] = [];
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelayBase = 500;
 
-    const upstream = new WebSocket(upstreamUrl);
-    const pendingToUpstream: { msg: WebSocket.RawData; isBinary: boolean }[] = [];
+    let clientHeartbeat: HeartbeatHandle | undefined;
+    let upstreamHeartbeat: HeartbeatHandle | undefined;
+
+    const clearUpstreamHeartbeat = () => {
+      if (upstreamHeartbeat) {
+        clearHeartbeat(upstreamHeartbeat);
+        upstreamHeartbeat = undefined;
+      }
+    };
+
+    const cleanup = () => {
+      clearHeartbeat(clientHeartbeat);
+      clearUpstreamHeartbeat();
+      pendingToUpstream.length = 0;
+    };
+
+    clientHeartbeat = setupHeartbeat(client, `page-client:${profileId}`, () => {
+      console.log(`[CDP:${profileId}] Page client heartbeat timeout, terminating`);
+      cleanup();
+      if (upstream) upstream.terminate();
+      client.terminate();
+    });
+
+    const setupUpstream = (ws: WebSocket) => {
+      clearUpstreamHeartbeat();
+      upstreamHeartbeat = setupHeartbeat(ws, `page-upstream:${profileId}`, () => {
+        console.log(`[CDP:${profileId}] Page upstream heartbeat timeout, terminating`);
+        if (ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+          ws.terminate();
+        }
+      });
+
+      ws.on('open', () => {
+        reconnectAttempts = 0;
+        console.log(`[CDP:${profileId}] Page upstream open, flushing ${pendingToUpstream.length} queued`);
+        for (const { msg, isBinary } of pendingToUpstream) {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(msg, { binary: isBinary });
+          }
+        }
+        pendingToUpstream.length = 0;
+      });
+
+      ws.on('message', (msg, isBinary) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(msg, { binary: isBinary });
+        }
+      });
+
+      ws.on('error', (err) => {
+        console.error(`[CDP:${profileId}] Page upstream error:`, err.message);
+      });
+
+      ws.on('close', () => {
+        console.log(`[CDP:${profileId}] Page upstream closed`);
+        clearUpstreamHeartbeat();
+
+        if (client.readyState !== WebSocket.OPEN) return;
+        if (reconnectAttempts >= maxReconnectAttempts) {
+          console.log(`[CDP:${profileId}] Max reconnect attempts reached, terminating client`);
+          cleanup();
+          client.terminate();
+          return;
+        }
+
+        reconnectAttempts++;
+        const delay = reconnectDelayBase * Math.pow(2, reconnectAttempts - 1);
+
+        console.log(`[CDP:${profileId}] Attempting reconnect ${reconnectAttempts}/${maxReconnectAttempts} in ${delay}ms`);
+
+        setTimeout(async () => {
+          if (client.readyState !== WebSocket.OPEN) return;
+
+          const newTarget = await findCurrentTargetByWebContentsId(webContentsId);
+          if (!newTarget) {
+            console.log(`[CDP:${profileId}] No target found for reconnection, retrying...`);
+            return;
+          }
+
+          currentUpstreamUrl = newTarget.webSocketDebuggerUrl;
+          console.log(`[CDP:${profileId}] Reconnecting to new target:`, currentUpstreamUrl);
+          upstream = new WebSocket(currentUpstreamUrl);
+          setupUpstream(upstream);
+        }, delay);
+      });
+    };
+
+    setupUpstream(upstream);
 
     client.on('message', (msg, isBinary) => {
-      if (upstream.readyState === WebSocket.OPEN) {
+      if (upstream && upstream.readyState === WebSocket.OPEN) {
         upstream.send(msg, { binary: isBinary });
       } else {
         pendingToUpstream.push({ msg, isBinary });
       }
     });
 
-    upstream.on('open', () => {
-      console.log(`[CDP:${profileId}] Page upstream open, flushing ${pendingToUpstream.length} queued`);
-      for (const { msg, isBinary } of pendingToUpstream) {
-        upstream.send(msg, { binary: isBinary });
-      }
-      pendingToUpstream.length = 0;
-    });
-
-    upstream.on('message', (msg, isBinary) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(msg, { binary: isBinary });
-      }
-    });
-
-    upstream.on('error', (err) => {
-      console.error(`[CDP:${profileId}] Page upstream error:`, err.message);
-      client.terminate();
-    });
-
     client.on('close', () => {
-      pendingToUpstream.length = 0;
-      upstream.terminate();
+      console.log(`[CDP:${profileId}] Page client closed`);
+      cleanup();
+      if (upstream) upstream.terminate();
     });
-    upstream.on('close', () => client.terminate());
   });
 
   await new Promise<void>((resolve) => server.listen(externalPort, '127.0.0.1', resolve));
@@ -353,6 +522,8 @@ export async function startCdpProxy(
       proxies.delete(profileId);
     },
   });
+
+  pendingProxies.delete(profileId);
 }
 
 export function stopCdpProxy(profileId: string): void {
@@ -361,4 +532,8 @@ export function stopCdpProxy(profileId: string): void {
 
 export function getCdpProxyPort(profileId: string): number | undefined {
   return proxies.get(profileId)?.externalPort;
+}
+
+export function getActiveProxyCount(): number {
+  return proxies.size;
 }

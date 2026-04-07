@@ -1,7 +1,7 @@
 import http from 'http';
 import { ProfileManager } from './profileManager';
 import { BrowserViewManager } from './browserViewManager';
-import { getCdpProxyPort } from './cdpProxy';
+import { getCdpProxyPort, getActiveProxyCount } from './cdpProxy';
 import { Profile } from '../shared/types';
 
 const PORT = 8868;
@@ -35,6 +35,17 @@ export function startApiServer(profileManager: ProfileManager, viewManager: Brow
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '', `http://localhost:${PORT}`);
     const pathname = url.pathname;
+
+    if (pathname === '/health' && req.method === 'GET') {
+      const activeIds = viewManager.getActiveProfileIds();
+      jsonResponse(res, 200, {
+        status: 'ok',
+        activeProfiles: activeIds.length,
+        activeProfileIds: activeIds,
+        proxyCount: getActiveProxyCount(),
+      });
+      return;
+    }
 
     if (pathname === '/list_profiles' && req.method === 'GET') {
       const profiles = profileManager.list();
