@@ -13,6 +13,9 @@ const SIDEBAR_WIDTH = 180;
 
 let win: BrowserWindow;
 let cdpPort: number;
+let profileManager: ProfileManager;
+let viewManager: BrowserViewManager;
+let initialized = false;
 
 console.log('Starting ProfileBrowser...');
 
@@ -53,10 +56,8 @@ initCdp().catch(err => {
   process.exit(1);
 });
 
-app.whenReady().then(() => {
-  console.log('App ready, creating window...');
-  
-  win = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  const newWin = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
@@ -68,21 +69,30 @@ app.whenReady().then(() => {
     },
   });
 
-  console.log('Window created');
+  if (!viewManager) {
+    viewManager = new BrowserViewManager(newWin, profileManager, TOOLBAR_HEIGHT, SIDEBAR_WIDTH);
+  } else {
+    viewManager = new BrowserViewManager(newWin, profileManager, TOOLBAR_HEIGHT, SIDEBAR_WIDTH);
+  }
 
-  const profileManager = new ProfileManager();
-  const viewManager = new BrowserViewManager(win, profileManager, TOOLBAR_HEIGHT, SIDEBAR_WIDTH);
-
-  registerIpcHandlers(win, profileManager, viewManager);
-  startApiServer(profileManager, viewManager);
-
-  win.on('resize', () => viewManager.recalculateBounds());
-  
-  win.on('closed', () => {
+  newWin.on('resize', () => viewManager.recalculateBounds());
+  newWin.on('closed', () => {
     console.log('Window closed');
     win = undefined as any;
   });
 
+  newWin.webContents.on('did-finish-load', () => {
+    console.log('Window content loaded');
+  });
+
+  newWin.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+    console.log('Failed to load:', errorCode, errorDescription);
+  });
+
+  return newWin;
+}
+
+function createMenu() {
   const menu = new Menu();
   menu.append(new MenuItem({
     submenu: [
@@ -110,12 +120,26 @@ app.whenReady().then(() => {
   menu.append(new MenuItem({
     label: 'Browser',
     submenu: [
-      { label: 'New Profile', accelerator: 'CmdOrCtrl+T', click: () => win.webContents.send('ui:newProfile') },
-      { label: 'Close Profile', accelerator: 'CmdOrCtrl+W', click: () => win.webContents.send('ui:closeProfile') },
-      { label: 'Focus Address', accelerator: 'CmdOrCtrl+L', click: () => win.webContents.send('ui:focusAddress') },
+      { label: 'New Profile', accelerator: 'CmdOrCtrl+T', click: () => win?.webContents.send('ui:newProfile') },
+      { label: 'Close Profile', accelerator: 'CmdOrCtrl+W', click: () => win?.webContents.send('ui:closeProfile') },
+      { label: 'Focus Address', accelerator: 'CmdOrCtrl+L', click: () => win?.webContents.send('ui:focusAddress') },
     ],
   }));
   Menu.setApplicationMenu(menu);
+}
+
+app.whenReady().then(() => {
+  console.log('App ready, creating window...');
+
+  profileManager = new ProfileManager();
+
+  win = createWindow();
+  console.log('Window created');
+
+  createMenu();
+  registerIpcHandlers(win, profileManager, viewManager);
+  startApiServer(profileManager, viewManager);
+  initialized = true;
 
   if (process.env.VITE_DEV_SERVER_URL) {
     console.log('Loading dev URL:', process.env.VITE_DEV_SERVER_URL);
@@ -125,14 +149,6 @@ app.whenReady().then(() => {
     console.log('Loading file:', indexPath);
     win.loadFile(indexPath);
   }
-  
-  win.webContents.on('did-finish-load', () => {
-    console.log('Window content loaded');
-  });
-  
-  win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.log('Failed to load:', errorCode, errorDescription);
-  });
 });
 
 app.on('window-all-closed', () => {
@@ -143,6 +159,16 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   console.log('App activated');
   if (win === undefined) {
-    // Recreate window if needed
+    win = createWindow();
+    console.log('Window recreated');
+
+    if (process.env.VITE_DEV_SERVER_URL) {
+      win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    } else {
+      const indexPath = path.join(__dirname, '../dist/renderer/index.html');
+      win.loadFile(indexPath);
+    }
+  } else {
+    win.show();
   }
 });
